@@ -30,7 +30,7 @@ The system consists of two components:
 - Displays dashboard of posts (with filter for current users posts)
 - Allows username change in profile page
 
-### 3. Backend API (Python)
+### 2. Backend API (Python)
 
 - Verifies Firebase ID tokens using Firebase Admin SDK
 - Handles creating and getting posts
@@ -80,21 +80,13 @@ and email, returning whatever requested.
 ```
 
 ### Backend — Pydantic User Models
-#### UserProfile (Firestore document)
+#### User (Firestore document)
 ```py
-class UserProfile(BaseModel):
+class User(BaseModel):
     uid: str
     email: Optional[str] = None
     username: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
-```
-
-#### UserPublic (returned to frontend)
-
-```py
-class UserPublic(BaseModel):
-    uid: str
-    username: str
 ```
 
 #### UsernameUpdate (frontend → backend)
@@ -104,138 +96,111 @@ class UsernameUpdate(BaseModel):
     username: str
 ```
 
-### Frontend — TypeScript User Models
-#### Firebase user
-
+### Frontend — TypeScript User Model
 ```ts
-export interface FirebaseUser {
+export interface User {
   uid: string;
-  email?: string | null;
-  displayName?: string | null;
-}
-```
-
-#### Firestore profile
-
-```ts
-export interface UserProfile {
-  uid: string;
+  email: string;
   username: string;
   created_at: string;
-}
-```
-
-#### Combined AppUser
-
-```ts
-export interface AppUser {
-  uid: string;
-  email?: string | null;
-  username: string;
 }
 ```
 
 ### 4.2 Post Data
 
-Posts have:
-
+### Posts have:
+```
 id
-
 user_id
-
+username
 title
-
 description
-
 created_at
+```
+Frontend gets posts from:
+`/posts`
 
-Stored at:
-
-/posts/{postId}
-
-Backend — Pydantic Post Models
-Post stored in Firestore
+### Backend — Pydantic Post Models
+#### Post stored in Firestore
+```py
 class Post(BaseModel):
     id: str
     user_id: str
+    username: str
     title: str
     description: str
     created_at: datetime
-
-PostCreate (frontend → backend)
+```
+#### PostCreate (frontend → backend)
+```py 
 class PostCreate(BaseModel):
     title: str
     description: str
+```
 
-PostListResponse
+#### PostListResponse
+```py
 class PostListResponse(BaseModel):
     posts: list[Post]
+```
 
-Frontend — TypeScript Post Models
-Post returned from backend
+### Frontend — TypeScript Post Models
+#### Post returned from backend
+```ts
 export interface Post {
   id: string;
   user_id: string;
+  username: string;
   title: string;
   description: string;
   created_at: string;
 }
+```
 
-PostCreate
+#### PostCreate (what the frontend sends to backend)
+```ts
 export interface PostCreate {
   title: string;
   description: string;
 }
-
-PostListResponse
+```
+#### PostListResponse (what the backend returns when /posts is called)
+```ts
 export interface PostListResponse {
   posts: Post[];
 }
+```
 
 ## 5. Frontend Architecture
 ### 5.1 AuthContext Responsibilities
 
-subscribe to onAuthStateChanged
-
-fetch Firestore user profile
-
-expose unified currentUser
-
-supply:
-
-register(email, password, username)
-
-login(email, password)
-
-logout()
-
-updateUsername()
-
-store loading state
+- subscribe to onAuthStateChanged
+- fetch user profile from the backend
+- hold current user
+- supplies:
+  - register(email, password, username)
+  - login(email, password)
+  - logout()
+  - updateUsername()
+  - store loading state
 
 ## 6. Backend API Specification
-
-Assume FastAPI:
-
 POST /posts
 
-Create new post
-Headers: Authorization: Bearer <token>
-Body: PostCreate
-
+Create new post <br>
+Headers: Authorization: Bearer \<token> <br>
+Body: PostCreate <br>
 Response: Post
 
 GET /posts
 
-Return all posts
-Headers: Authorization: Bearer <token> (optional if public)
-
+Return all posts <br>
 Response: PostListResponse
 
-PATCH /users/me/username
+PATCH /users/username
 
 Update username
-Headers: token
+Headers: Authorization: Bearer \<token> <br>
 Body: UsernameUpdate
 
 ## 7. Firestore Structure
@@ -259,15 +224,10 @@ posts/
 
 ## 8. Security Rules (High-Level)
 Users:
-
-Can read their own user profile
-
-Can update only their username field
+- Can read their own user profile
+- Can update only their username field
 
 Posts:
-
-Anyone logged in can read posts
-
-Only authenticated users can create posts
-
-No one can edit posts (simple app)
+- Anyone can read posts
+- Only authenticated users can create posts
+- No one can edit posts (simple app)
