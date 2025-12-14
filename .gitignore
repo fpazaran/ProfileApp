@@ -42,4 +42,4 @@ yarn-error.*
 
 ### backend
 */venv/
-*/__pycache__/
+**/__pycache__/
